@@ -19,9 +19,11 @@ app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max file size
 def home():
     return jsonify({
         "message": "Handwritten Data OCR API",
+        "version": "1.0",
         "endpoints": {
-            "/api/free-ocr": "POST - Free-form OCR",
-            "/api/template-ocr": "POST - Template-based OCR"
+            "/api/free-ocr": "POST - Free-form OCR (extract all text)",
+            "/api/template-ocr": "POST - Template-based OCR (structured extraction)",
+            "/api/auto-column-ocr": "POST - Auto-column detection OCR (automatic tables)"
         }
     })
 
