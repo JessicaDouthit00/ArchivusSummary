@@ -85,5 +85,33 @@ def template_ocr_route():
             os.remove(filepath)
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/auto-column-ocr", methods=["POST"])
+def auto_column_ocr_route():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files["file"]
+    
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+    
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    file.save(filepath)
+    
+    try:
+        # Run auto-column detection OCR
+        results = ocr_new.auto_column_ocr(filepath)
+        
+        # Clean up uploaded file
+        os.remove(filepath)
+        
+        return jsonify({"results": results})
+    except Exception as e:
+        # Clean up file if it exists
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
