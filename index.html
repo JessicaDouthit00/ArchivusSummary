@@ -389,12 +389,21 @@
                     <span class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-lg">3</span>
                     Your Results
                 </h2>
-                <button onclick="downloadResults()" class="btn-download flex items-center gap-3 text-white py-3 px-6 rounded-xl font-bold shadow-lg transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                    </svg>
-                    Download CSV
-                </button>
+                <div class="flex gap-3">
+                    <button onclick="downloadResults()" class="btn-download flex items-center gap-3 text-white py-3 px-6 rounded-xl font-bold shadow-lg transition-all">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Download CSV
+                    </button>
+                    
+                    <button onclick="downloadDocument()" id="downloadDocBtn" class="btn-primary flex items-center gap-3 text-white py-3 px-6 rounded-xl font-bold shadow-lg transition-all" style="display: none;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Download as Document
+                    </button>
+                </div>
             </div>
             <div id="resultsContent" class="overflow-hidden rounded-xl border border-cyan-400/20"></div>
         </div>
@@ -437,7 +446,7 @@
     <footer class="glass-navy mt-16 border-t border-cyan-400/20 relative z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
             <p class="text-cyan-100 font-medium">By Jessica Douthit</p>
-            <p class="text-cyan-300 text-sm mt-2">Helping researchers digitize data efficiently </p>
+            <p class="text-cyan-300 text-sm mt-2">Helping researchers digitize data efficiently</p>
         </div>
     </footer>
 
@@ -558,6 +567,9 @@
                         </table>
                     </div>
                 `;
+                
+                // Show document download button for free mode
+                document.getElementById('downloadDocBtn').style.display = 'flex';
             } else if (currentMode === 'template') {
                 html = '<div class="space-y-4">';
                 for (const [field, value] of Object.entries(results)) {
@@ -572,6 +584,9 @@
                     `;
                 }
                 html += '</div>';
+                
+                // Hide document button for template mode
+                document.getElementById('downloadDocBtn').style.display = 'none';
             } else if (currentMode === 'auto') {
                 const columns = Object.keys(results);
                 const maxRows = Math.max(...Object.values(results).map(col => col.length));
@@ -594,6 +609,9 @@
                         </table>
                     </div>
                 `;
+                
+                // Hide document button for auto mode
+                document.getElementById('downloadDocBtn').style.display = 'none';
             }
 
             container.innerHTML = html;
@@ -636,6 +654,34 @@
             a.download = `ocr_results_${currentMode}_${Date.now()}.csv`;
             a.click();
             window.URL.revokeObjectURL(url);
+        }
+
+        async function downloadDocument() {
+            if (!selectedFile || currentMode !== 'free') return;
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            try {
+                const response = await fetch(`${API_URL}/api/free-ocr-document`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate document');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ocr_document_${Date.now()}.html`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                showError('Failed to generate document: ' + error.message);
+            }
         }
 
         function showError(message) {
