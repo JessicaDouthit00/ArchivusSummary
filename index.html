@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivus: An AI Assistant for Researchers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            background-attachment: fixed;
+        }
+        
+        .glass-navy {
+            background: rgba(15, 32, 39, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .glass-light {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .mode-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(100, 200, 255, 0.2);
+        }
+        
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+        
+        .mode-card:hover::before {
+            left: 100%;
+        }
+        
+        .mode-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0, 200, 255, 0.3);
+            border-color: rgba(0, 200, 255, 0.6);
+        }
+        
+        .mode-card.active {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.2), rgba(0, 200, 255, 0.1));
+            border: 2px solid rgba(0, 200, 255, 0.8);
+            box-shadow: 0 10px 40px rgba(0, 200, 255, 0.4), inset 0 0 20px rgba(0, 200, 255, 0.1);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        
+        .upload-zone {
+            transition: all 0.4s ease;
+            background: linear-gradient(135deg, rgba(0, 100, 200, 0.1), rgba(0, 150, 255, 0.05));
+            border: 3px dashed rgba(0, 200, 255, 0.3);
+        }
+        
+        .upload-zone:hover {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.2), rgba(0, 200, 255, 0.1));
+            border-color: rgba(0, 200, 255, 0.6);
+            transform: scale(1.01);
+            box-shadow: 0 0 30px rgba(0, 200, 255, 0.3);
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 20px rgba(0, 200, 255, 0.5);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0096ff 0%, #00d4ff 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 30px rgba(0, 150, 255, 0.4);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(0, 200, 255, 0.6);
+        }
+        
+        .btn-download {
+            background: linear-gradient(135deg, #00c9ff 0%, #92fe9d 100%);
+            box-shadow: 0 5px 30px rgba(0, 200, 255, 0.3);
+        }
+        
+        .btn-download:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(0, 200, 255, 0.5);
+        }
+        
+        .result-row {
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .result-row:hover {
+            background: rgba(0, 200, 255, 0.1);
+            transform: translateX(8px);
+            box-shadow: -5px 0 0 rgba(0, 200, 255, 0.5);
+        }
+        
+        .floating {
+            animation: floating 4s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+        
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(0, 200, 255, 0.3), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .hero-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.2;
+            animation: blob 10s infinite;
+        }
+        
+        @keyframes blob {
+            0%, 100% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(50px, -50px) scale(1.2); }
+            66% { transform: translate(-30px, 30px) scale(0.9); }
+        }
+
+        .icon-glow {
+            filter: drop-shadow(0 0 10px rgba(0, 200, 255, 0.6));
+        }
+
+        .neon-border {
+            box-shadow: 0 0 20px rgba(0, 200, 255, 0.5), inset 0 0 20px rgba(0, 200, 255, 0.1);
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, rgba(0, 100, 200, 0.4), rgba(0, 150, 255, 0.4));
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <!-- Animated Background Blobs -->
+    <div class="hero-blob" style="width: 400px; height: 400px; background: #0096ff; top: -150px; left: -150px; animation-delay: 0s;"></div>
+    <div class="hero-blob" style="width: 500px; height: 500px; background: #00d4ff; bottom: -200px; right: -200px; animation-delay: 3s;"></div>
+    <div class="hero-blob" style="width: 350px; height: 350px; background: #0064c8; top: 50%; left: 50%; animation-delay: 6s;"></div>
+    
+    <!-- Header -->
+    <header class="glass-navy shadow-2xl border-b border-cyan-400/20 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex items-center gap-4">
+                <div class="floating">
+                    <svg class="w-14 h-14 text-cyan-400 icon-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-4xl font-bold text-white glow-text">Archivus: An AI Assistant for Researchers</h1>
+                    <p class="text-cyan-200 mt-2 text-lg">Transform handwritten research data into structured digital formats</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+        
+        <!-- Mode Selection -->
+        <div class="glass-navy rounded-2xl shadow-2xl p-8 mb-8 animate-fadeInUp neon-border">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <span class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-lg">1</span>
+                Select Your OCR Mode
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Free-Form OCR -->
+                <button onclick="selectMode('free')" id="btn-free" class="mode-card active p-8 rounded-2xl shadow-lg">
+                    <div class="flex justify-center mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center transform rotate-3 shadow-xl">
+                            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-xl mb-3 text-white">Free-Form OCR</h3>
+                    <p class="text-cyan-100 text-sm leading-relaxed">Extract all text without structure. Perfect for notes, formulas, and board writings.</p>
+                    <div class="mt-4 flex items-center gap-2 text-cyan-300 text-sm font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Best for unstructured data
+                    </div>
+                </button>
+
+                <!-- Template-Based OCR -->
+                <button onclick="selectMode('template')" id="btn-template" class="mode-card p-8 rounded-2xl shadow-lg">
+                    <div class="flex justify-center mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center transform -rotate-3 shadow-xl">
+                            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-xl mb-3 text-white">Template-Based OCR</h3>
+                    <p class="text-cyan-100 text-sm leading-relaxed">Extract data using predefined templates. Ideal for standardized research forms.</p>
+                    <div class="mt-4 flex items-center gap-2 text-blue-300 text-sm font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Maximum accuracy
+                    </div>
+                </button>
+
+                <!-- Auto-Column OCR -->
+                <button onclick="selectMode('auto')" id="btn-auto" class="mode-card p-8 rounded-2xl shadow-lg">
+                    <div class="flex justify-center mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center transform rotate-6 shadow-xl">
+                            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-xl mb-3 text-white">Auto-Column OCR</h3>
+                    <p class="text-cyan-100 text-sm leading-relaxed">Automatically detect columns and tables. No template required!</p>
+                    <div class="mt-4 flex items-center gap-2 text-teal-300 text-sm font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Smart detection
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="glass-navy rounded-2xl shadow-2xl p-8 mb-8 animate-fadeInUp neon-border" style="animation-delay: 0.2s;">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <span class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-lg">2</span>
+                Upload Your Image
+            </h2>
+            
+            <div class="mb-8">
+                <label for="fileInput" class="upload-zone flex flex-col items-center justify-center w-full h-72 rounded-2xl cursor-pointer">
+                    <div class="flex flex-col items-center justify-center pt-7 pb-7">
+                        <div class="mb-4 relative">
+                            <div class="absolute inset-0 bg-cyan-400 rounded-full blur-2xl opacity-40"></div>
+                            <svg class="w-20 h-20 text-cyan-400 relative icon-glow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                            </svg>
+                        </div>
+                        <p class="mb-3 text-lg font-semibold text-white">
+                            <span class="text-cyan-300">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-sm text-cyan-200 mb-2">PNG, JPG, or JPEG (MAX. 16MB)</p>
+                        <p id="fileName" class="mt-4 text-base text-cyan-300 font-bold"></p>
+                    </div>
+                    <input id="fileInput" type="file" class="hidden" accept="image/*" onchange="handleFileSelect(event)">
+                </label>
+            </div>
+
+            <!-- Image Preview -->
+            <div id="previewContainer" class="mb-8 hidden">
+                <h3 class="text-lg font-semibold text-cyan-100 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    Image Preview
+                </h3>
+                <div class="relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-2xl blur-xl opacity-30"></div>
+                    <img id="preview" class="relative max-w-full h-auto rounded-2xl border-4 border-cyan-400/30 shadow-2xl max-h-96 object-contain mx-auto">
+                </div>
+            </div>
+
+            <button onclick="processImage()" id="processBtn" disabled class="btn-primary w-full text-white py-4 px-8 rounded-xl font-bold text-lg disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Process Image
+            </button>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorContainer" class="glass-navy rounded-2xl p-6 mb-8 hidden border-l-4 border-red-400 shadow-xl">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-red-300 text-lg">Oops! Something went wrong</h3>
+                    <p id="errorMessage" class="text-red-200 mt-2"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successContainer" class="glass-navy rounded-2xl p-6 mb-8 hidden border-l-4 border-emerald-400 shadow-xl">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-emerald-300 text-lg">Success!</h3>
+                    <p class="text-emerald-200 mt-2">Your OCR processing completed successfully. Results are ready below!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsContainer" class="glass-navy rounded-2xl shadow-2xl p-8 hidden animate-fadeInUp neon-border">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <span class="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center text-white text-xl font-bold shadow-lg">3</span>
+                    Your Results
+                </h2>
+                <button onclick="downloadResults()" class="btn-download flex items-center gap-3 text-white py-3 px-6 rounded-xl font-bold shadow-lg transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download CSV
+                </button>
+            </div>
+            <div id="resultsContent" class="overflow-hidden rounded-xl border border-cyan-400/20"></div>
+        </div>
+
+        <!-- Info Cards -->
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass-light rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border border-cyan-400/20">
+                <div class="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-bold text-lg text-white mb-2">Lightning Fast</h3>
+                <p class="text-cyan-200 text-sm">Process your handwritten data in seconds with our optimized OCR engine.</p>
+            </div>
+            
+            <div class="glass-light rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border border-cyan-400/20">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </div>
+                <h3 class="font-bold text-lg text-white mb-2">Highly Accurate</h3>
+                <p class="text-cyan-200 text-sm">Advanced AI ensures maximum accuracy with confidence scoring for each extraction.</p>
+            </div>
+            
+            <div class="glass-light rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all border border-cyan-400/20">
+                <div class="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-xl flex items-center justify-center mb-4 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                </div>
+                <h3 class="font-bold text-lg text-white mb-2">Export Ready</h3>
+                <p class="text-cyan-200 text-sm">Download your results as CSV files, ready for Excel or further analysis.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="glass-navy mt-16 border-t border-cyan-400/20 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+            <p class="text-cyan-100 font-medium">By Jessica Douthit</p>
+            <p class="text-cyan-300 text-sm mt-2">Helping researchers digitize data efficiently </p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://jessicadouthit55.pythonanywhere.com';
+        
+        let currentMode = 'free';
+        let selectedFile = null;
+        let resultsData = null;
+
+        function selectMode(mode) {
+            currentMode = mode;
+            
+            ['free', 'template', 'auto'].forEach(key => {
+                const btn = document.getElementById(`btn-${key}`);
+                if (key === mode) {
+                    btn.className = 'mode-card active p-8 rounded-2xl shadow-lg';
+                } else {
+                    btn.className = 'mode-card p-8 rounded-2xl shadow-lg';
+                }
+            });
+            
+            hideResults();
+        }
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            
+            if (selectedFile) {
+                document.getElementById('fileName').textContent = `✓ ${selectedFile.name}`;
+                document.getElementById('processBtn').disabled = false;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('preview').src = e.target.result;
+                    document.getElementById('previewContainer').classList.remove('hidden');
+                };
+                reader.readAsDataURL(selectedFile);
+                
+                hideResults();
+            }
+        }
+
+        async function processImage() {
+            if (!selectedFile) {
+                showError('Please select a file first');
+                return;
+            }
+
+            const processBtn = document.getElementById('processBtn');
+            const originalContent = processBtn.innerHTML;
+            
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<div class="spinner"></div><span class="ml-2">Processing your image...</span>';
+            
+            hideResults();
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                let endpoint = '/api/free-ocr';
+                if (currentMode === 'template') endpoint = '/api/template-ocr';
+                if (currentMode === 'auto') endpoint = '/api/auto-column-ocr';
+                
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'OCR processing failed');
+                }
+
+                resultsData = data.results;
+                showSuccess();
+                displayResults(data.results);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                processBtn.disabled = false;
+                processBtn.innerHTML = originalContent;
+            }
+        }
+
+        function displayResults(results) {
+            const container = document.getElementById('resultsContent');
+            let html = '';
+
+            if (currentMode === 'free') {
+                html = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="table-header">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-sm font-bold text-white uppercase tracking-wider">Text</th>
+                                    <th class="px-6 py-4 text-left text-sm font-bold text-white uppercase tracking-wider">Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-cyan-400/10">
+                                ${results.map((item, idx) => `
+                                    <tr class="result-row">
+                                        <td class="px-6 py-4 text-sm text-cyan-100 font-medium">${item.text}</td>
+                                        <td class="px-6 py-4 text-sm">
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex-1 bg-gray-700/50 rounded-full h-2 max-w-[120px]">
+                                                    <div class="bg-gradient-to-r from-cyan-400 to-blue-500 h-2 rounded-full transition-all duration-500" style="width: ${item.confidence * 100}%"></div>
+                                                </div>
+                                                <span class="text-cyan-300 font-semibold">${(item.confidence * 100).toFixed(1)}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (currentMode === 'template') {
+                html = '<div class="space-y-4">';
+                for (const [field, value] of Object.entries(results)) {
+                    html += `
+                        <div class="result-row flex flex-col sm:flex-row sm:items-center gap-3 p-5 rounded-xl border border-cyan-400/20">
+                            <div class="flex items-center gap-2 sm:w-1/3">
+                                <div class="w-2 h-2 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50"></div>
+                                <span class="font-bold text-cyan-100">${field}</span>
+                            </div>
+                            <span class="text-white sm:w-2/3 bg-white/5 px-4 py-3 rounded-lg border border-cyan-400/20">${value || '(empty)'}</span>
+                        </div>
+                    `;
+                }
+                html += '</div>';
+            } else if (currentMode === 'auto') {
+                const columns = Object.keys(results);
+                const maxRows = Math.max(...Object.values(results).map(col => col.length));
+                
+                html = `
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="table-header">
+                                <tr>
+                                    ${columns.map(col => `<th class="px-6 py-4 text-left text-sm font-bold text-white uppercase tracking-wider">${col}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-cyan-400/10">
+                                ${Array.from({ length: maxRows }).map((_, rowIdx) => `
+                                    <tr class="result-row">
+                                        ${columns.map(col => `<td class="px-6 py-4 text-sm text-cyan-100 font-medium">${results[col][rowIdx] || ''}</td>`).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+            document.getElementById('resultsContainer').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('resultsContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        function downloadResults() {
+            if (!resultsData) return;
+
+            let csvContent = '';
+            
+            if (currentMode === 'free') {
+                csvContent = 'Text,Confidence\n';
+                resultsData.forEach(item => {
+                    csvContent += `"${item.text}",${item.confidence}\n`;
+                });
+            } else if (currentMode === 'template') {
+                const headers = Object.keys(resultsData).join(',');
+                const values = Object.values(resultsData).map(v => `"${v}"`).join(',');
+                csvContent = `${headers}\n${values}\n`;
+            } else if (currentMode === 'auto') {
+                const headers = Object.keys(resultsData).join(',');
+                csvContent = headers + '\n';
+                
+                const maxRows = Math.max(...Object.values(resultsData).map(col => col.length));
+                for (let i = 0; i < maxRows; i++) {
+                    const row = Object.values(resultsData).map(col => `"${col[i] || ''}"`).join(',');
+                    csvContent += row + '\n';
+                }
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ocr_results_${currentMode}_${Date.now()}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorContainer').classList.remove('hidden');
+            document.getElementById('successContainer').classList.add('hidden');
+            document.getElementById('errorContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showSuccess() {
+            document.getElementById('successContainer').classList.remove('hidden');
+            document.getElementById('errorContainer').classList.add('hidden');
+        }
+
+        function hideResults() {
+            document.getElementById('resultsContainer').classList.add('hidden');
+            document.getElementById('errorContainer').classList.add('hidden');
+            document.getElementById('successContainer').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
