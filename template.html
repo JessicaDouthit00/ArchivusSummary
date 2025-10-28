@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Creator - Archivus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            background-attachment: fixed;
+        }
+        
+        .glass-navy {
+            background: rgba(15, 32, 39, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #canvas-container {
+            position: relative;
+            display: inline-block;
+            cursor: crosshair;
+        }
+        
+        canvas {
+            border: 2px solid rgba(0, 200, 255, 0.5);
+            border-radius: 8px;
+        }
+        
+        .selection-box {
+            position: absolute;
+            border: 2px solid #00d4ff;
+            background: rgba(0, 212, 255, 0.2);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="glass-navy rounded-2xl shadow-2xl p-6 mb-8">
+            <h1 class="text-3xl font-bold text-white mb-2">Template Creator</h1>
+            <p class="text-cyan-200">Create a template by selecting regions on your form</p>
+        </div>
+
+        <!-- Instructions -->
+        <div class="glass-navy rounded-2xl shadow-2xl p-6 mb-8">
+            <h2 class="text-xl font-bold text-white mb-4">How to Use:</h2>
+            <ol class="text-cyan-100 space-y-2 list-decimal list-inside">
+                <li>Upload a blank form image</li>
+                <li>Click and drag to select each field region</li>
+                <li>Enter a name for each field in the table below</li>
+                <li>Download your template.json file</li>
+                <li>Go back to the main page and use Template-Based OCR!</li>
+            </ol>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="glass-navy rounded-2xl shadow-2xl p-6 mb-8">
+            <h2 class="text-xl font-bold text-white mb-4">Step 1: Upload Blank Form</h2>
+            <input type="file" id="fileInput" accept="image/*" class="block w-full text-white
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-lg file:border-0
+                file:text-sm file:font-semibold
+                file:bg-cyan-500 file:text-white
+                hover:file:bg-cyan-600 cursor-pointer"/>
+        </div>
+
+        <!-- Canvas Section -->
+        <div id="canvasSection" class="glass-navy rounded-2xl shadow-2xl p-6 mb-8 hidden">
+            <h2 class="text-xl font-bold text-white mb-4">Step 2: Select Field Regions</h2>
+            <p class="text-cyan-200 mb-4">Click and drag to select each field area</p>
+            <div id="canvas-container" class="mb-4">
+                <canvas id="canvas"></canvas>
+            </div>
+            <button onclick="clearLastSelection()" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg">
+                Clear Last Selection
+            </button>
+        </div>
+
+        <!-- Fields Table -->
+        <div id="fieldsSection" class="glass-navy rounded-2xl shadow-2xl p-6 mb-8 hidden">
+            <h2 class="text-xl font-bold text-white mb-4">Step 3: Name Your Fields</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead class="bg-cyan-600">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Field Name</th>
+                            <th class="px-4 py-2 text-left">Coordinates</th>
+                            <th class="px-4 py-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fieldsTableBody" class="divide-y divide-cyan-400/20">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Download Section -->
+        <div id="downloadSection" class="glass-navy rounded-2xl shadow-2xl p-6 mb-8 hidden">
+            <h2 class="text-xl font-bold text-white mb-4">Step 4: Download Template</h2>
+            <button onclick="downloadTemplate()" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white py-3 px-6 rounded-lg font-bold">
+                Download template.json
+            </button>
+            <a href="index.html" class="ml-4 inline-block bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-bold">
+                Go to Main Page →
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let canvas, ctx, img;
+        let isDrawing = false;
+        let startX, startY;
+        let selections = [];
+        let currentSelection = null;
+
+        document.getElementById('fileInput').addEventListener('change', handleImageUpload);
+
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                img = new Image();
+                img.onload = function() {
+                    setupCanvas();
+                    document.getElementById('canvasSection').classList.remove('hidden');
+                    document.getElementById('fieldsSection').classList.remove('hidden');
+                    document.getElementById('downloadSection').classList.remove('hidden');
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setupCanvas() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match image
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            // Draw image
+            ctx.drawImage(img, 0, 0);
+            
+            // Add event listeners
+            canvas.addEventListener('mousedown', startSelection);
+            canvas.addEventListener('mousemove', drawSelection);
+            canvas.addEventListener('mouseup', endSelection);
+        }
+
+        function startSelection(e) {
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+            isDrawing = true;
+            currentSelection = { x: startX, y: startY, width: 0, height: 0 };
+        }
+
+        function drawSelection(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            currentSelection.width = currentX - startX;
+            currentSelection.height = currentY - startY;
+            
+            // Redraw everything
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            
+            // Draw existing selections
+            ctx.strokeStyle = '#00d4ff';
+            ctx.lineWidth = 2;
+            selections.forEach(sel => {
+                ctx.strokeRect(sel.x, sel.y, sel.width, sel.height);
+                ctx.fillStyle = 'rgba(0, 212, 255, 0.2)';
+                ctx.fillRect(sel.x, sel.y, sel.width, sel.height);
+            });
+            
+            // Draw current selection
+            ctx.strokeRect(currentSelection.x, currentSelection.y, currentSelection.width, currentSelection.height);
+            ctx.fillStyle = 'rgba(0, 212, 255, 0.2)';
+            ctx.fillRect(currentSelection.x, currentSelection.y, currentSelection.width, currentSelection.height);
+        }
+
+        function endSelection(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            // Normalize coordinates (handle negative width/height)
+            const x = Math.min(currentSelection.x, currentSelection.x + currentSelection.width);
+            const y = Math.min(currentSelection.y, currentSelection.y + currentSelection.height);
+            const width = Math.abs(currentSelection.width);
+            const height = Math.abs(currentSelection.height);
+            
+            if (width > 5 && height > 5) {  // Minimum size
+                const selection = {
+                    x: Math.round(x),
+                    y: Math.round(y),
+                    width: Math.round(width),
+                    height: Math.round(height),
+                    name: ''
+                };
+                selections.push(selection);
+                updateFieldsTable();
+            }
+            
+            currentSelection = null;
+        }
+
+        function updateFieldsTable() {
+            const tbody = document.getElementById('fieldsTableBody');
+            tbody.innerHTML = '';
+            
+            selections.forEach((sel, index) => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td class="px-4 py-2">
+                        <input type="text" 
+                               value="${sel.name}" 
+                               onchange="updateFieldName(${index}, this.value)"
+                               placeholder="Enter field name"
+                               class="bg-gray-700 text-white px-3 py-1 rounded w-full"/>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-cyan-200">
+                        [${sel.x}, ${sel.y}, ${sel.x + sel.width}, ${sel.y + sel.height}]
+                    </td>
+                    <td class="px-4 py-2 text-center">
+                        <button onclick="deleteField(${index})" 
+                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                            Delete
+                        </button>
+                    </td>
+                `;
+            });
+        }
+
+        function updateFieldName(index, name) {
+            selections[index].name = name;
+        }
+
+        function deleteField(index) {
+            selections.splice(index, 1);
+            updateFieldsTable();
+            
+            // Redraw canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            ctx.strokeStyle = '#00d4ff';
+            ctx.lineWidth = 2;
+            selections.forEach(sel => {
+                ctx.strokeRect(sel.x, sel.y, sel.width, sel.height);
+                ctx.fillStyle = 'rgba(0, 212, 255, 0.2)';
+                ctx.fillRect(sel.x, sel.y, sel.width, sel.height);
+            });
+        }
+
+        function clearLastSelection() {
+            if (selections.length > 0) {
+                selections.pop();
+                updateFieldsTable();
+                
+                // Redraw canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                ctx.strokeStyle = '#00d4ff';
+                ctx.lineWidth = 2;
+                selections.forEach(sel => {
+                    ctx.strokeRect(sel.x, sel.y, sel.width, sel.height);
+                    ctx.fillStyle = 'rgba(0, 212, 255, 0.2)';
+                    ctx.fillRect(sel.x, sel.y, sel.width, sel.height);
+                });
+            }
+        }
+
+        function downloadTemplate() {
+            if (selections.length === 0) {
+                alert('Please select at least one field region!');
+                return;
+            }
+            
+            // Check if all fields have names
+            const unnamed = selections.filter(s => !s.name || s.name.trim() === '');
+            if (unnamed.length > 0) {
+                alert('Please name all fields before downloading!');
+                return;
+            }
+            
+            // Create template JSON
+            const template = selections.map(sel => ({
+                name: sel.name,
+                coords: [sel.x, sel.y, sel.x + sel.width, sel.y + sel.height]
+            }));
+            
+            // Download
+            const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'template.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert('Template downloaded! Now upload it to your backend and use Template-Based OCR mode.');
+        }
+    </script>
+</body>
+</html>
