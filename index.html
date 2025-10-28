@@ -269,13 +269,16 @@
                         </div>
                     </div>
                     <h3 class="font-bold text-xl mb-3 text-white">Template-Based OCR</h3>
-                    <p class="text-cyan-100 text-sm leading-relaxed">Extract data using predefined templates. Ideal for standardized research forms.</p>
-                    <div class="mt-4 flex items-center gap-2 text-blue-300 text-sm font-medium">
+                    <p class="text-cyan-100 text-sm leading-relaxed mb-4">Extract data using predefined templates. Ideal for standardized research forms.</p>
+                    <div class="mt-4 flex items-center gap-2 text-blue-300 text-sm font-medium mb-3">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
                         Maximum accuracy
                     </div>
+                    <a href="template-creator.html" onclick="event.stopPropagation()" class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                        Create Template →
+                    </a>
                 </button>
 
                 <!-- Auto-Column OCR -->
@@ -401,7 +404,7 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
-                        Download as Document
+                        Download as Word Doc
                     </button>
                 </div>
             </div>
@@ -676,7 +679,7 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `ocr_document_${Date.now()}.html`;
+                a.download = `ocr_document_${Date.now()}.docx`;
                 a.click();
                 window.URL.revokeObjectURL(url);
             } catch (error) {
